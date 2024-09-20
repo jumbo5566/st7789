@@ -106,6 +106,12 @@ class ST7789Spi : public OLEDDisplay {
       SPISettings 		    _spiSettings;
       uint16_t            _RGB=0xFFFF;
       uint8_t             _buffheight;
+
+      // Memory Data Access Control
+      // Meshtastic firmware flips displays by default (legacy of the T-Beam)
+      // Our default config here is "flipped" (relative to the bootloader screen), to counter this convention
+      uint8_t _MADCTL=ST77XX_MADCTL_RGB|ST77XX_MADCTL_MV|ST77XX_MADCTL_MY;
+
   public:
     /* pass _cs as -1 to indicate "do not use CS pin", for cases where it is hard wired low */
     ST7789Spi(SPIClass *spiClass,uint8_t _rst, uint8_t _dc, uint8_t _cs, OLEDDISPLAY_GEOMETRY g = GEOMETRY_RAWMODE,uint16_t width=240,uint16_t height=135,int mosi=-1,int miso=-1,int clk=-1) {
@@ -119,6 +125,7 @@ class ST7789Spi : public OLEDDisplay {
       //this->_ledA  = _ledA;
       _spiSettings = SPISettings(40000000, MSBFIRST, SPI_MODE0);
       setGeometry(g,width,height);
+      setRGB(ST77XX_GREEN); // Default to Green, if color not explicity specified by Meshtastic firmware
     }
 
     bool connect(){
@@ -242,23 +249,23 @@ class ST7789Spi : public OLEDDisplay {
     }
 
  virtual void resetOrientation() {
-	uint8_t madctl = ST77XX_MADCTL_RGB|ST77XX_MADCTL_MV|ST77XX_MADCTL_MX;
+	_MADCTL = ST77XX_MADCTL_RGB|ST77XX_MADCTL_MV|ST77XX_MADCTL_MY;
 	sendCommand(ST77XX_MADCTL);
-	WriteData(madctl);
+	WriteData(_MADCTL);
 	delay(10);
   }
   
  virtual void flipScreenVertically() {
-	uint8_t madctl = ST77XX_MADCTL_RGB|ST77XX_MADCTL_MV|ST77XX_MADCTL_MY;
+	_MADCTL = ST77XX_MADCTL_RGB|ST77XX_MADCTL_MV|ST77XX_MADCTL_MX;
 	sendCommand(ST77XX_MADCTL);
-	WriteData(madctl);
+	WriteData(_MADCTL);
 	delay(10);
   }
   
  virtual void mirrorScreen() {
-	uint8_t madctl = ST77XX_MADCTL_RGB|ST77XX_MADCTL_MV|ST77XX_MADCTL_MX|ST77XX_MADCTL_MY;
+	_MADCTL = ST77XX_MADCTL_RGB|ST77XX_MADCTL_MV|ST77XX_MADCTL_MX|ST77XX_MADCTL_MY;
 	sendCommand(ST77XX_MADCTL);
-	WriteData(madctl);
+	WriteData(_MADCTL);
 	delay(10);
   }
 
@@ -294,8 +301,8 @@ class ST7789Spi : public OLEDDisplay {
         WriteData(0x55); 
         delay(10);
         
-        sendCommand(ST77XX_MADCTL); //  4: Mem access ctrl (directions), Row/col addr, bottom-top refresh
-        WriteData(0x08); 
+        sendCommand(ST77XX_MADCTL); //  4: Mem access ctrl (directions)
+        WriteData(_MADCTL); 
         
         sendCommand(ST77XX_CASET); //   5: Column addr set, 
         WriteData(0x00); 
@@ -320,13 +327,6 @@ class ST7789Spi : public OLEDDisplay {
 
         sendCommand(ST77XX_INVON); //  10: invert
         delay(10);
-
-        //uint8_t madctl = ST77XX_MADCTL_RGB|ST77XX_MADCTL_MX;
-        uint8_t madctl = ST77XX_MADCTL_RGB|ST77XX_MADCTL_MV|ST77XX_MADCTL_MX;
-        sendCommand(ST77XX_MADCTL);
-        WriteData(madctl);
-        delay(10);
-        setRGB(ST77XX_GREEN);
     }
 
 
