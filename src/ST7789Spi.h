@@ -33,7 +33,8 @@
 
 #include "OLEDDisplay.h"
 #include <SPI.h>
-
+#include <FreeRTOS.h>
+#include <task.h>  // 部分RTOS中rtos_malloc定义在task.h或heap.h中
 
 #define ST_CMD_DELAY 0x80 // special signifier for command lists
 
@@ -144,7 +145,7 @@ class ST7789Spi : public OLEDDisplay {
 #else
       _spi->begin();
 #endif
-      _spi->setClockDivider (SPI_CLOCK_DIV2);
+      //_spi->setClockDivider (SPI_CLOCK_DIV2);
 
       // Pulse Reset low for 10ms
       digitalWrite(_rst, HIGH);
@@ -201,7 +202,8 @@ class ST7789Spi : public OLEDDisplay {
               setAddrWindow(minBoundX,y*8+temp,maxBoundX-minBoundX+1,1);
               //setAddrWindow(y*8+temp,minBoundX,1,maxBoundX-minBoundX+1);
               uint32_t const pixbufcount = maxBoundX-minBoundX+1;
-              uint16_t *pixbuf = (uint16_t *)rtos_malloc(2 * pixbufcount);
+              //uint16_t *pixbuf = (uint16_t *)rtos_malloc(2 * pixbufcount);
+              uint16_t *pixbuf = (uint16_t *)malloc(2 * pixbufcount);
               for (x = minBoundX; x <= maxBoundX; x++)
               {
                 pixbuf[x-minBoundX] = ((buffer[x + y * displayWidth]>>temp)&0x01)==1?_RGB:0;
