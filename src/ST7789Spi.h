@@ -33,8 +33,6 @@
 
 #include "OLEDDisplay.h"
 #include <SPI.h>
-#include <FreeRTOS.h>
-#include <task.h>  // 部分RTOS中rtos_malloc定义在task.h或heap.h中
 
 #define ST_CMD_DELAY 0x80 // special signifier for command lists
 
@@ -159,6 +157,9 @@ class ST7789Spi : public OLEDDisplay {
     }
 
     void display(void) {
+
+    // 在display()函数外定义静态数组（仅初始化一次）
+    static uint16_t pixbuf[240];  // 240像素 * 2字节/像素 = 480字节
     #ifdef OLEDDISPLAY_DOUBLE_BUFFER
 
        uint16_t minBoundY = UINT16_MAX;
@@ -203,7 +204,11 @@ class ST7789Spi : public OLEDDisplay {
               //setAddrWindow(y*8+temp,minBoundX,1,maxBoundX-minBoundX+1);
               uint32_t const pixbufcount = maxBoundX-minBoundX+1;
               //uint16_t *pixbuf = (uint16_t *)rtos_malloc(2 * pixbufcount);
-              uint16_t *pixbuf = (uint16_t *)malloc(2 * pixbufcount);
+              for (x = minBoundX; x <= maxBoundX; x++)
+              {
+              pixbuf[x-minBoundX] = ((buffer[x + y * displayWidth]>>temp)&0x01)==1?_RGB:0;
+              }
+
               for (x = minBoundX; x <= maxBoundX; x++)
               {
                 pixbuf[x-minBoundX] = ((buffer[x + y * displayWidth]>>temp)&0x01)==1?_RGB:0;
@@ -213,7 +218,7 @@ class ST7789Spi : public OLEDDisplay {
 #else
               _spi->transfer(pixbuf, NULL, 2 * pixbufcount);
 #endif
-              rtos_free(pixbuf);
+              //rtos_free(pixbuf);
             }
           }
 	  _spi->endTransaction();
